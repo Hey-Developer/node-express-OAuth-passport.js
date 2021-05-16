@@ -1,0 +1,112 @@
+$ WHAT IS OAUTH 2.0
+  
+In stone-age Days sharing information between different services is so easy, you just simply give your username and password to the 2nd service and that service will log in to your 1st service  account and grab the information which they want.
+But there is no guarantee that other service will not misuse your credentials and keep them safe also there is no guarantee that service won't access more of you personal information other than necessary.
+
+So there is a need of a standard which agreed upon sharing information between different services.
+
+So One Such standard which is widely Accepted is 
+# OAUTH 2.0,is security standard where you give permission to one application to access you data from another application, instead of giving them your username and password, you give them a KEY that gives them specific permission to access your data or do things on your behalf in another application.
+
+-> These Steps of grant permission or consent are often referred as authorization or even delegate authorization.
+
+EXAMPLE: 
+Suppose you find a website terriblepunofday.com which send you pun joke as text on your phone,now you loved it so much, hence you want to share it with everyone you know.
+Now What you can do either you can copy that link and send it to everyone a email, but this sounds like a heavy work which you won't do.
+OR what you can do is the website also has a sharing feature, to invite your friends through email.
+
+So it is so obvious that you use the other option.
+
+So you go onto invite friends, select your email provider, now this will redirect you to the your email provider consent page but before it checks weather you are logged in or not,
+if not logged in yourEmailProvider will ask you to login and then redirect you to a consent from where yourEmailProvider will prompt you 
+"Do you want to give terriblepunofday Access to your contacts"
+Yes OR No
+if you deny then terriblepunofday can't access your contacts and now invite feature will not work.
+But if you allow then it will redirect you to the terriblepunofday/thank-you page and now the website can access your contacts and send all of them email on your behalf. and in this case terriblepunofday can only access your contacts because you only allow that resource to be share without sharing your username and password which means the terriblepunofday site only have a key that is used to by your another service, which is your email provider and yourEmailProvider will verify that key and only allow access to contacts.
+
+- This All is known as OAuth Flow,which is made of visible steps to grant consent as well as some invisible steps, where the two services agree on a secure way of exchanging information.
+
+SOME Terminologies related OAuth flow..
+
++1: RESOURCE OWNER-> which is you, you are the owner of your identity.
+
++2: CLIENT-> which is the Application which wants to access data, like in our example is terriblepunofday.com which wants to access your contacts information.
+
++3: AUTHORIZATION SERVER: is the application that knows the resource owner where the resource owner has already has an account in our example this is yourEmailProvider.
+
++4: RESOURCE SERVER: This is API or a service which client wants to use on behalf of resource owner, in our example: it is the contact service which terriblepunofday.com wants to use. In most case AUTHORIZATION SERVER and RESOURCE SERVER are the some but there are some case where they can be different.
+
++5: REDIRECT URL: this is the url where the authorization server will redirect the you after successfully granting permission to the client also referred as "callback URL".
+
++6: RESPONSE TYPE: the type of the information client expect to receive, the most common response type is code where client expect to receive a authorization code.
+
++7: SCOPE: These are the granular permission which client wants such as access the data or to perform actions. such as reading contacts,deleting contacts, creating contacts.
+
++8: Consent: The Authorization server takes the scope which client is requesting and verifies it with the resource owner whether or not they want to give permission.
+
++9: CLIENT ID: this id is used to identify the client with the authorization server.
+
++10: CLIENT SECRET: this is tha secret password which only the client and the authorization server know.
+
++11: AUTHORIZATION CODE: this is the short lived temporary code which authorization server send back the the client after successfully grant the consent. ALSO client privately send this authorization code along with the client secret and in exchange get a Access TOKEN.
+
++12: ACCESS TOKEN: is the key the client will use from that point forward to communicate with the resource server, this is like a key that give the client, permission to access the data or perform actions on your behalf.
+
+* NOW WHAT IS BIGGEST DOUBT IS: why do i need that clientID or client secret?????
+
+OHKAY let me explain you..
+Suppose we want to access any covid19 API to get the data, is it possible to get the data very easily i mean you just access the url and get the data...NO
+You first need to sign-up on that service get a API_KEY and then only you allow to fetch the data.
+
+Similarly..
+In Our Example,
+the site terriblepunofday.com knows that my user will use invite feature so i must add few email operators  so that, my user can easily connect my website with their data.
+Hence to include the this feature terriblepunofday.com need to call the emailprovider/Oauth api so that user can allow its access to my website.
+
+Hence terriblepunofday.com go to the yourEmailProvider and ask- Hey i would like to work with you,
+to this terriblepunofday.com needs to signup in the developer profile and then the yourEmailProvider will give the client a clientID and clientSecret to the client which terriblepunofday.com will use along the future request for authorization.
+
+when client i.e terriblepunofday.com sent the request to authorizationServer which is yourEmailProvider, authorization server check that the clientId and clientSecret is correct or not then only it will allow the api to proceed further.
+
+* ONE more doubt that is when user click on their emailProvider then why that emailProvide ask for login..??
+😂😂😂😂😂Such a silly question but i will give answer is that..
+What you are doing when user click on their emailProvider at backend you simply go and call and authAPI like emailProvider/auth/api along with clientId and ClientSecret and also the scope that means for what you are asking for now at emailProvider.com when your request receive then he understand that you want to access some information on this user behalf but in your request you did not specify who is the user. so emailProvider.com is intelligent enough that it checks that is there any active login session then beDefault it will use that logged in person as user but if no active session then it asked your user to log in with emailProvider.com so it get to know that on behalf of which user you want to access info.
+
+$ NOW WHAT THE HECK IS OpenID Connect ???
+  Well let's recap:
+
+  ? OAuth 2.0 is a protocol designed only for "AUTHORIZATION" for granting access to data & feature from one application to other, OAuth give a client a key that is useful to access data from another application but this KEY did not tell anything about you to the client that is who you are.
+  whereas
+  ? OpenID Connect (OIDC) is thin Layer that sits on the top of OAuth 2.0 that adds a functionality of "AUTHENTICATION" i.e login and profile information about the person who is logged in, instead of KEY OIDC give client a badge that not only allow client permission but also provide information about the user which enables client to enables a login session.
+
+  > OpenId Connect enables scenarios where one login can used accross multiple application also known as "SINGLE-SIGN-ON" or SSO.
+  For Ex a website could support sso with social network sites (like google-facebook-twitter-etc)
+  IN This way website user can choose various option to sign-in to the application without filling any additional form and to again set a username and password for another application.
+  Also client get the user information from the service user used for sign-in in our website using OIDC and OAuth protocol.
+
+  * NOW LET's take example of ATM Machine..
+  - ATM Machine is a client.
+  - It's job is to access data such as your bank balance and perform bank operations such as withdrawal, transfer,etc
+  - Your Bank Card is the ACCESS_TOKEN issues by the bank.
+  - BANK is here is the AUTHORIZATION_SERVER and the RESOURCE_SERVER.
+  - NOW here the ACCESS_TOKEN not only give the ATM i.e client  access to your account info i.e authorization ,but it also have some basic information about who you are, your identity and authentication information such as the card expires,who issued it.
+  - An ATM can't work without an underlying bank infrastructure similarly OIDC sits on top of OAUTH and cannot work before the OAUTH FrameWork.
+
+
+# OIDC FLOW:
+  now the flow of OIDC is same as the OAuth2.0 flow the only difference is in two steps:
+  >1: is in when the client sent the request to authorizationServer api for authorization, one additional field is add in the scope which is OPENID along with the clientID and clientSecret this tells the AuthorizationServer this will be an openID connect exchange.
+
+  Now the authorizationServer will go through all the same steps as before , the key difference in OIDC is when client send the authorization token to the authorization server for an exchange of ACCESS_TOKEN now in response the authorization server will send one additional token which is "ID_TOKEN"
+
+  ? The ID_TOKEN  is a specially formatted string of characters known as an "JSON-WEB-TOKEN" or "JWT" these string is not readable by client and anyone but client decode it using a JWT decoder and extract the information inside it. 
+
+Summary: https://developer.okta.com/blog/2019/10/21/illustrated-guide-to-oauth-and-oidc#:~:text=OAuth%202.0%20is%20designed%20only,person%20who%20is%20logged%20in.&text=The%20OpenID%20Connect%20flow%20looks%20the%20same%20as%20OAuth.
+
+$ Now What is the role of PASSPORT.js 
+  well after understanding above all concepts of OAUTH2.0 and OPENID connect the only thing i want to say is that 
+  > THANK You soo soo much passport.js for making our life easier
+
+  What does passport.js do is
+  - It provide built-in methods that under the hood uses OIDC and OAuth2.0 protocols
+  - We just need to provide the some basic constraints and it will do the rest of work and in return it just provide us what we need that is user profile and additional stuff.

@@ -1,0 +1,75 @@
+just a imp point: Google's OAuth 2.0 APIs can be used for both authentication and authorization. This document describes our OAuth 2.0 implementation for authentication, which conforms to the OpenID Connect specification, and is OpenID Certified
+
+$ Google Sign-In Using Passport.js
+  The Google strategy allows users to sign in to a web application using their Google account. Google used to support OpenID internally, but it now works based on OpenID Connect and supports oAuth 1.0 and oAuth 2.0.
+  
+  - Before using passport-google-oauth20, you must register an application with Google. If you have not already done so, a new project can be created in the Google Developers Console. Your application will be issued a client ID and client secret, which need to be provided to the strategy. You will also need to configure a redirect URI which matches the route in your application.
+
+
+
+@ STEP:1 Configuration, The Google authentication strategy authenticates users using a Google account and OAuth 2.0 tokens. The client ID and secret obtained when creating an application are supplied as options when creating the strategy. The strategy also requires a verify callback, which receives the access token and optional refresh token, as well as profile which contains the authenticated user's Google profile. The verify callback must call cb providing a user to complete authentication.
+
+  first import the two main packages
+  > const passport= require("passport");
+  > const GoogleStrategy= require("passport-google-oauth20").Strategy;
+  // i hope you guys already installed these packages
+
+  Then we have to tell passport to use the google strategy via a "use()" function like this..
+  > passport.use(new GoogleStrategy(
+        //1st param: OPtions 
+  >     {
+  >         clientID: GOOGLE_CLIENT_ID,
+  >         clientSecret: GOOGLE_CLIENT_SECRET,
+  >         callbackURL: "http://www.example.com/auth/google/callback"
+  >     },
+        // 2nd param: A CB function
+  >     function(accessToken,refreshToken,profile,done) {
+  >         // Here we get the user info from the above provider.
+  >         // here we store the user data in our database.
+  >         User.findOrCreate({ googleId: profile.id }, function (err, user) {
+  >        return done(err, user);
+  >      });
+  >     }
+  > ))
+  > 
+  
+  - Explanation: 
+    + To Get the options (clientID,clientSecret) you just need to login to console.developer.google.com
+    Under the hood go the api section and add GOOGLE+ API
+    Then Setup the OAuth consent screen provide the basic details.
+    Then go to credentials section and add OAuth clientID credentials, Fill up the details about your APP and simply get the clientID and clientSecret.
+
+    + The Second Param which is a verify callback is the function which fires after the google respond you with the details.
+    If the user authenticate successfully then you will get the user details in the profile object which we use in the callback otherwise,
+    If the user is not authenticate successfully then google will respond u with the error.
+
+    + What is the callbackURL,
+      When u click sign-in-with-Google you will redirect to a Google Consent Form and then when u click allow,--> you will redirect to a url this url is known as callbackURL or callback-url
+
+@ STEP:2 Routes
+  Now the above step is just for configuration but to kick start the sign-in process we need to initialize the passport service and also tell our express app that at which route you need  to use this google auth service, to do that we simply pass a method as a middleware, like this.
+  - Use passport.authenticate(), specifying the 'google' strategy, to authenticate requests. Authentication with Google requires an extra scope parameter. 
+  note: under the hood this when we call passport.authenticate() it will internally dealing with the OIDC and OAuth2.0 flow where the request goes on the www.google.com/oauth/v2 and it take the options from the configuration where we provide the clientId and clientSecret etc.
+
+  For example, as route middleware in an Express application:
+
+  +  GET /auth/google
+  +  Use passport.authenticate() as route middleware to authenticate the request.
+  +  The first step in Google authentication will involve redirecting the user to google.com. and ask for login and then for consent form.
+  +  After authorization, Google, will redirect the user back to this application at /auth/google/callback
+  > app.get('/auth/google',
+  >   passport.authenticate('google', { scope: ['profile'] }));
+
++ GET /auth/google/callback
++ Use passport.authenticate() as route middleware to authenticate the request.  
++ If authentication fails, the user will be redirected back to the login page.
++ Otherwise, the primary route function function will be called,which, in this example, will redirect the user to the home page.
+  > app.get('/auth/google/callback', 
+  >   passport.authenticate('google', { failureRedirect: '/login' }),
+  >   function(req, res) {
+  >     // Successful authentication, redirect home.
+  >     res.redirect('/');
+  >   });
+
+  
+@ And That's All I hope you already initialize passport and sessions.

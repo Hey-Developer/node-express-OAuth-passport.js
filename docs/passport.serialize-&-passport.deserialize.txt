@@ -1,0 +1,63 @@
+$ What is passport.serialize and passport.deserialize??
+  Passport attaches the profile information to req.user and this occurs as a result of the serializeUser() and deserializeUser() functions.
+
+  - Passport.serialize and passport.deserialize are used to set id as a cookie in the user's browser and to get the id from the cookie when it then used to get user info in a callback. 
+
+? Why this passport.serialize and passport.deserialize ??
+  In a typical web application, the credentials used to authenticate a user will only be transmitted during the login request. If authentication succeeds, a session will be established and maintained via a cookie set in the user's browser.
+
+  Each subsequent request will not contain credentials, but rather the unique cookie that identifies the session. In order to support login sessions, Passport will serialize and deserialize user instances to and from the session.
+
+  Hence to establish sessions we use passport.serialize and passport.deserialize methods
+
+? How to use them-->
+  @passport.serialize() this functions take two param:
+   + done: this used to pass on the flow same as the next()
+   + user: this is the user which we provided from the verify callback this contains the user id which we provided in the verify callback.
+   - Now what does the above function do. well it just used to set the user id in the cookie and then send it the browser with response.
+   (similar to res.cookie("id","shft4736vcdv"));
+
+  @passport.deserialize() this function take two param:
+  + done: this used to pass on the flow same as the next()
+  + id: this is the user id which we got from the passport.deserialize() this is id is used to find out the user from our database and return this user in req.user
+  - This function help us to find the user from our database with the corresponding user id and then send this user with the request object as req.user
+
+  > passport.serializeUser(function(user, done) {
+  >   done(null, user.id);
+  > });
+  > 
+  > passport.deserializeUser(function(id, done) {
+  >   User.findById(id, function(err, user) {
+  >     done(err, user);
+  >   });
+  > });
+
+
+? Where does user.id go after passport.serializeUser has been called?
+  The user id (you provide as the second argument of the done function) is saved in the session and is later used to retrieve the whole object via the deserializeUser function.
+
+  serializeUser determines which data of the user object should be stored in the session. The result of the serializeUser method is attached to the session as req.session.passport.user = {}. Here for instance, it would be (as we provide the user id as the key) req.session.passport.user = {id: 'xyz'}
+
+? We are calling passport.deserializeUser right after it where does it fit in the workflow?
+  The first argument of deserializeUser corresponds to the key of the user object that was given to the done function (see above.). So your whole object is retrieved with help of that key. That key here is the user id (key can be any key of the user object i.e. name,email etc). In deserializeUser that key is matched with the in memory array / database or any data resource.
+
+  The fetched object is attached to the request object as req.user
+
+# Visual Flow: 
+  > passport.serializeUser(function(user, done) {
+  >     done(null, user.id);
+  > });              │
+  >                  │ 
+  >                  │
+  >                  └─────────────────┬──→ saved to session
+  >                                    │    req.session.passport.user = {id: '..'}
+  >                                    │
+  >                                    ↓           
+  > passport.deserializeUser(function(id, done) {
+  >                    ┌───────────────┘
+  >                    │
+  >                    ↓ 
+  >     User.findById(id, function(err, user) {
+  >         done(err, user);
+  >     });            └──────────────→ user object attaches to the request as req.user   
+  > });

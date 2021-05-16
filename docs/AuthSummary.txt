@@ -1,0 +1,164 @@
+# Basic Theory of AUTH-WITH-GOOGLE-USING-PASSPORT.js
+  - User Will click on google sign btn
+  - We will redirect user to /auth/google.
+  - In the /auth/google we will make a request to https://accounts.google.com/o/oauth2/v2/ along with the the options such as clientId and clientSecret responseType and the callbackURL.
+  - Now Google will ask user for consent form, user can allow or deny the consent form.
+  - if user allow that means now Authorization_Server i.e Google will allow us to access the information of user which we requested for.
+  - here our purpose is just for authentication and not for additional resources.
+  - SO After User Allow the consent form the flow will redirect to a callbackURL which we provide URL but now the Authorization_Server pass a additional auth_code in response to the callbackURL.
+  - Ok so now what we want, we want to access user profile and email information which we requested for.
+  - To get the information we need to now exchange that auth_code with the access_token for this we will again request the Authorization_Server with the auth_code and now in response the Authorization_Server will send us access_token but also one more thing which is the information which we requested for that is user profile and email info.
+  - Now as we don't need to access any further user information hence in our case access_token is not in use for us.
+  - So now when we got the user profile and email info we store it in our db.
+  - Next step is to establish a session.
+  - So what we do is we will send a cookie to the client machine and in the cookie we will set a user id.
+  - Now next time when user sent us a request this cookie will automatically be sent from the browser along with the request so we will grab that cookie check for the user.id, we will check this id is the id which we sent or user tampered with it.
+  - To check we will find this user id on our database and if it find we will extract the user info with that id and then allow the user to access our authentication_routes because we verify the user is authenticated.
+  - Now to logout we simply delete the cookie by replacing it with null and a very short maxAge,so automatically it will be deleted from the client machine.
+  - and now next time user made any request, if that cookie with user.id then we will repeat the cookie-verification process,
+  - but if cookie is not present we will redirect user to login screen
+
+# With Code implementation of AUTH-WITH-GOOGLE-USING-PASSPORT.js
+  passport.js will help us a lot in this auth process,below are the steps where passport.js will be use for.
+  + at creating a request to https://accounts.google.com/o/oauth2/v2/
+  + Exchanging the auth_code with the access_token and the profile info.
+  + establish session by creating a cookie with user id.
+  + decode cookie and retrieve user information.
+
+  ? Terminologies:
+    + verifyCallback: is the callback function that will be called after the successful verification of the user from the authorizationServer.
+
+  Now let's see how passport.js will do all this stuff.
+
+  @ Step-1: First Install passport and the strategy u want to use for sign-in, here we are going to use google+ hence we will install passport-google-oauth20 package.
+    > npm i passport passport-google-oauth20
+
+  @ Step-2: Now to start the auth process first we need to set up the passport strategy configuration, to do that create a separate passportConfig.js file under /config folder.
+  // require package
+  > const passport= require("passport");
+  > const GoogleStrategy= require("passport-google-oauth20").Strategy;
+  
+  // now we tell passport to use Google-sign-in as strategy.
+  // use() function takes two arguments: 
+  // one is the strategy object. ex new GoogleStrategy()
+  // second is the verify callback.
+  > passport.use(
+  >   new GoogleStrategy({
+          // options for connecting to the accounts.google.com/o/oauth2/v2/ API
+          // to connect to the api we need to provide 3 options
+  >       clientID: process.env.GOOGLE_CLIENT_ID,
+  >       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  >       callbackURL: "/auth/google/callback",
+          // to get these options go to console.developer.google.com and then under api section--> add Google+ API --> and then create credentials for Oauth client.
+  >   }),
+  >   ()=> {
+          // this is verify callback, it contain all the information after successful user authentication by google.
+          // such as:
+          // accessToken: to access the resources from the resources_server on users behalf
+          // refreshToken: to refresh the accessToken.
+          // profile: this contain the accessToken, expiry and a id_token which is a JWT token.
+          // this JWT token when decode then we will get the all general information about user
+          // done: this is the function which must be call at the end of this function to continue the flow to next middleware.
+          // in done we provide two param one is for any errors and the other one is for user id for storing it in session.
+          // we can also save the user profile info in our database here.
+  >        User.findOrCreate({ googleId: profile.id_token }, function (err, user) {
+  >             return done(err, user);
+                // after this the flow will go the passport.serialize and passport.deserialize.
+  >         });
+  >   }
+  > )
+
+  @ Step-3: Establish the routes for google sign-in and the google-callback
+    // in authRoutes.js file
+    // here we will provide a passport.authenticate middleware in the route which will do all the tasks such as requesting the google OAUTH Api along with the credentials which we already provided in the config.
+    // After the user accept or deny the consent form the google redirect us to our callback url which we already provided in the config.
+    // passport middleware are designed as same as the express middleware hence after the successful authentication the middleware will call next() method to continue the flow of request.
+    > router.get(
+    >     "/google",
+    >     passport.authenticate(
+    >         "google",
+    >         {
+                  //options for request that is what you want after successful auth or where to redirect after login failed or do you want to use session or not..etc
+                  // here we need to provide one property which google required is that scope.
+                  // scope is an array: here you specify the resources which you want to access from the authorizationServer and the resources_server
+                  // The scope parameter must begin with the openid value and then include the profile value, the email value, or both.
+                  // If the profile scope value is present, the ID token might (but is not guaranteed to) include the user's default profile claims.
+                  // If the email scope value is present, the ID token includes email and email_verified claims.
+                  // here i need two information profile and email hence i specify two .
+    >             scope:["openid","profile", "email"]
+                  // we can also disable session by setting session: false, but here we need it hence i didn't do that. 
+    >         }
+    >     )
+    > );
+
+    // Now we should define the callback URL where the google_auth_server will redirect our user along with the auth_code.
+    // now here we get the auth_code from the authorizationServer so we need to exchange this auth_code with the access_token and profile info.
+    // For this we have to privately request the authorizationServer.
+    // well don't worry this is also handled by the passport.js 
+    // we just need to call that passport.authenticate() middleware again.
+    // & now with our request we have new param which is auth_code so now passport middleware will understand and now instead of redirect user to google consent form, 
+    // it will now contact the google_auth_server and exchange the auth_code with the access_token and profile info.
+    // and if everything works fine this middleware will call the next(access_token, profile)
+    // now this next() will redirect the flow to verify callback remember which we define in our config
+    // and in the verify callback we take the profile info--> save to our database--> and call next(user.id) with user.id to create the session.
+    > router.get(
+    >     "/google/callback",
+    >     passport.authenticate(
+    >         "google",
+    >         {
+                  //options
+    >             failureRedirect: "/login",
+    >         }
+    >     ),
+    >     (req,res)=>{
+              // This is our main request handler where the flow comes at last when everything done successfully
+              // Here the flow came after creating session using cookie and also adding the user to req.user
+              // i.e passport.authenticate()-->verifyCallback-->passport.serialize()-->passport.deserialize()-->this RequestHandler.
+    >         res.redirect("/);
+    >     }
+    > );
+
+  @Step-4: Now as all Basics Process is done we just need to kickStart Passport.
+   // to kickStart passport first your need to add the passportConfig file in your APP.js also require passport for further configuration.
+   > require("../config/passportConfig.js");
+   > const passport= require("passport");
+   
+   // As we are using session we need to enable session support in our express app. by installing npm i express-session and then apply it in middleware.
+   > const session= require("session");
+   > app.use(
+   >   session({
+   >     secret: "keyboard cat",
+   >     resave: false,
+   >     saveUninitialized: false,
+   >   })
+   > );
+
+   //now tell your express app to use passport by setting the middleware.
+   > app.use(passport.initialize());
+   // As we use session we also need to on the passport.session()
+   > app.use(passport.session());
+
+   @Step:5 One Last Step is that we initialize session but we didn't setup the methods used by passport.session() to establish session.
+   // go in our passportConfig.js file and add two methods in that.
+   // passport.serialize(): this method takes the user from the verifyCallback and then set the user id from the user object as the cookie to start the login session, just like res.cookie("id","348374gcvvc");
+   // passport.deserialize(): this method takes the user id from the passport.serialize() and then using this user id find the user in our database then attach the found user object in the request object like.. req.user
+   // both this method have done() function Which is use to pass the flow just like next() function.
+   // Also under the hood they directly send our user id with cookie, passport will encode and then send the browser and when browser sent that cookie back to us with request, passport will decode that cookie and provide us the main user id which we send with the cookie.
+   > passport.serializeUser(function(user, done) {
+   >   done(null, user.id);
+   > });
+   
+   > passport.deserializeUser(function(id, done) {
+   >   User.findById(id, function(err, user) {
+   >     done(err, user);
+   >   });
+   > });
+
+   @ Hence done..
+   These above two methods play an imp role in verify the user after he/she logged.
+   Now let's revisit the flow i.e user go to the sign-in-with google option then redirect the google sign-in, then google give us the basic profile detail we take that details and save it two our database.
+   Now passport.serialize will take id from our user object which we registered and set it as cookie to uniquely identify the user.
+   after this passport.deserialize will now take that id which passport.serialize send, and check it in database if it present it will retun the whole user object and attach it with the request object.
+   + So we can say once a user logged in its user object attach to the req object which can access like this req.user
+   So next time we will see if req.user() is present that means the user is already logged in. and we will allow it to access protected routes.
+   

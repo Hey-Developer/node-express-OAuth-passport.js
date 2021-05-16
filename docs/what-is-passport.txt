@@ -1,0 +1,106 @@
+$ Passport is authentication middleware for Node.js. Extremely flexible and modular, Passport can be unobtrusively dropped in to any Express-based web application. A comprehensive set of strategies support authentication using a username and password, Facebook, Twitter, and more.
+
+So In Simple Words this is a third party library which enables us to use Open authorization:
+> It is a helper which take our request to the various legit websites through which our user wants to sign in and then in return the credentials which we store in our database.
+
+TO Use Passport.js
+You need to install two packages:
+-1. One is the main passport.js packages
+-2 and second one is the strategies which u want to use in your app like the way user sign in (with Google, Facebook, Twitter, and more)
+
+Here in our case we want the google sign-in feature so we will install 
++ npm i passport passport-google-oauth
+now What Next?..
+
+# Config:
+  Three pieces need to be configured to use Passport for authentication:
+  > Authentication strategies
+  > Application middleware
+  > Sessions (optional)
+
+Let's Configure the first one:
+For config we create a passportConfig.js file under Config folder.
+
+? STEP-1> Strategies: 
+  Passport uses what are termed strategies to authenticate requests. Strategies range from verifying a username and password, delegated authentication using OAuth or federated authentication using OpenID.
+
+  Before asking Passport to authenticate a request, the strategy (or strategies) used by an application must be configured.
+
+  + Strategies, and their configuration, are supplied via the use() function. 
+  just like we tell express-app via the use() which middleware to use in our app.
+  FOr Ex-the following uses the LocalStrategy for username/password authentication.
+  > passport.use(new LocalStrategy(
+  >   function(username, password, done) {
+  >     User.findOne({ username: username }, function (err, user) {
+  >       if (err) { return done(err); }
+  >       if (!user) {
+  >         return done(null, false, { message: 'Incorrect username.' });
+  >       }
+  >       if (!user.validPassword(password)) {
+  >         return done(null, false, { message: 'Incorrect password.' });
+  >       }
+  >       return done(null, user);
+  >     });
+  >   }
+  > ));
+  What we done above is we create a new instance of the Strategy and provide that object in use() function:
+  Inside our Strategy Object we can pass two param,
+  + One is the config options
+  + and the second is the callback function(VerifyCallback) 
+  * What is done above?
+  Verify Callback, 
+  This example introduces an important concept. Strategies require what is known as a verify callback. The purpose of a verify callback is to find the user that possesses a set of credentials.
+
+  When Passport authenticates a request, it parses the credentials contained in the request. It then invokes the verify callback with those credentials as arguments, in this case username and password. If the credentials are valid, the verify callback invokes done to supply Passport with the user that authenticated.
+  > return done(null, user);
+
+  If the credentials are not valid (for example, if the password is incorrect), done should be invoked with false instead of a user to indicate an authentication failure.
+  > return done(null, false);
+
+  An additional info message can be supplied to indicate the reason for the failure. This is useful for displaying a flash message prompting the user to try again.
+  > return done(null, false, { message: 'Incorrect password.' });
+
+  Finally, if an exception occurred while verifying the credentials (for example, if the database is not available), done should be invoked with an error, in conventional Node style.
+  > return done(err);
+
+? STEP-2> Middleware
+  In a Connect or Express-based application,passport.initialize() middleware is required to initialize Passport. If your application uses persistent login sessions, passport.session() middleware must also be used.
+  > app.configure(function() {
+  >   app.use(express.static('public'));
+  >   app.use(express.cookieParser());
+  >   app.use(express.bodyParser());
+  >   app.use(express.session({ secret: 'keyboard cat' }));
+  >   app.use(passport.initialize());
+  >   app.use(passport.session());
+  >   app.use(app.router);
+  > });
+
+  Note: that enabling session support is entirely optional, though it is recommended for most applications. If enabled, be sure to use session() before passport.session() to ensure that the login session is restored in the correct order.
+  * BUT By default passport will use persistent login sessions if you do not want session then you must disable session in authenticate() request.
+
+  In Express 4.x, the Connect middleware is no longer included in the Express core, and the app.configure() method has been removed. The same middleware can be found in their npm module equivalents.
+
+  > var session = require("express-session"),
+  >     bodyParser = require("body-parser");
+  > 
+  > app.use(express.static("public"));
+  > app.use(session({ secret: "cats" }));
+  > app.use(bodyParser.urlencoded({ extended: false }));
+  > app.use(passport.initialize());
+  > app.use(passport.session());
+
+? STEP-3> Sessions: 
+  In a typical web application, the credentials used to authenticate a user will only be transmitted during the login request. If authentication succeeds, a session will be established and maintained via a cookie set in the user's browser.
+
+  Each subsequent request will not contain credentials, but rather the unique cookie that identifies the session. In order to support login sessions, Passport will serialize and deserialize user instances to and from the session.
+
+  > passport.serializeUser(function(user, done) {
+  >   done(null, user.id);
+  > });
+  
+  > passport.deserializeUser(function(id, done) {
+  >   User.findById(id, function(err, user) {
+  >     done(err, user);
+  >   });
+  > });
+

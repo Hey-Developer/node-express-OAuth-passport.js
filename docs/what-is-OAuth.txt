@@ -1,0 +1,9 @@
+$ OAuth stands for Open-Authorization..
+  OAuth is an open-standard authorization protocol or framework that describes how unrelated servers and services can safely allow authenticated access to their assets without actually sharing the initial, related, single logon credential. In authentication parlance, this is known as secure, third-party, user-agent, delegated authorization.
+
+  Simply Using OAuth 
+  - Our user don;t have to fill the signup form to give its identity.
+  - Instead we give them option to submit their credential using some other legit website where he/she already submitted their credential.
+  - Example the most legit website is Google and almost every user that will visit our website have google account.
+    > So what we can do is we will provide our user option to sign-in with google and now for getting user detail google will share the user credential with us.
+    > In this case user don't have to fill another sign-up form to provide details and also we don't need to get the user details from from, we will get directly verified details from the google.
